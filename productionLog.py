@@ -49,7 +49,7 @@ class ProductionLog(QtCore.QObject):
             #print('Zeile ', str(self.__logRow),': ', cell)
             if cell:
                 content = True
-                if not self.__log['O'+str(self.__logRow)].value:
+                if self.__log['N'+str(self.__logRow)].value and self.__log['P'+str(self.__logRow)].value and not self.__log['Q'+str(self.__logRow)].value:
                     self.__prodID.append(self.testCell(cell))
                     cell = self.__log['B'+str(self.__logRow)].value
                     self.__fbgID.append(self.testCell(cell))
@@ -78,17 +78,18 @@ class ProductionLog(QtCore.QObject):
         
     def setSensorParams(self, index, center, fwhm, cog, asym, sens, temp):
         row = str(self.__idRow[index])
-        self.__log['O'+row].value = center[0]
-        self.__log['Q'+row].value = str(temp)
-        self.__log['R'+row].value = asym[0]
-        self.__log['S'+row].value = fwhm[0]
-        self.__log['T'+row].value = center[2]
-        self.__log['U'+row].value = sens[1]
-        self.__log['V'+row].value = asym[2]
-        self.__log['W'+row].value = fwhm[2]
-        self.__log['X'+row].value = center[1]
-        self.__log['Y'+row].value = sens[0]
-        self.__log['Z'+row].value = asym[1]
-        self.__log['AA'+row].value = fwhm[1]
+        self.__log['Q'+row].value = center[0]
+        self.__log['R'+row].value = center[0]-1550.0
+        self.__log['S'+row].value = str(temp)
+        self.__log['T'+row].value = asym[0]
+        self.__log['U'+row].value = fwhm[0]
+        self.__log['V'+row].value = center[2]
+        self.__log['W'+row].value = sens[1]
+        self.__log['X'+row].value = asym[2]
+        self.__log['Y'+row].value = fwhm[2]
+        self.__log['Z'+row].value = center[1]
+        self.__log['AA'+row].value = sens[0]
+        self.__log['AB'+row].value = asym[1]
+        self.__log['AC'+row].value = fwhm[1]
         
         self.wb.save(self.excel)

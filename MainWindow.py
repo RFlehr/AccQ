@@ -60,6 +60,7 @@ class MainWindow(QtGui.QMainWindow):
         self.qcFolder = str('../../QC')
         self.gLabel = ['0g','-1g', '+1g']
         self.sensorIndex = 0
+        self.cogSpectralWin = 2.5
                        
         self.setWindowTitle(__title__ + ' ' + __version__)
         self.resize(900, 600)
@@ -446,18 +447,10 @@ class MainWindow(QtGui.QMainWindow):
         self.maxWlSpin.setValue(1570.0)
         self.maxWlSpin.valueChanged.connect(self.scaleInputSpectrum)#self.plotW.setMaxWavlength)
         
-#==============================================================================
-#         auto = QtGui.QCheckBox()
-#         auto.setChecked(True)
-#         auto.stateChanged.connect(self.setAutoScale)
-#         
-#==============================================================================
-        
         l = QtGui.QHBoxLayout()
         l.addWidget(self.minWlSpin)
         l.addWidget(QtGui.QLabel(text=' - '))
         l.addWidget(self.maxWlSpin)
-        #l.addWidget(auto)
         
         w = QtGui.QWidget()
         w.setLayout(l)
@@ -690,7 +683,7 @@ class MainWindow(QtGui.QMainWindow):
         center, fwhm = self.peakFit(x,y)
         self.gPeaks[index] = center
         self.gFWHM[index] = fwhm
-        cog = self.centerOfGravity(x,y)
+        cog = self.centerOfGravity(x,y, peak=self.gPeaks[index])
         self.gCOG[index] = cog
         self.gAsym[index] = self.calculateAsym(center,cog)
         
@@ -716,13 +709,23 @@ class MainWindow(QtGui.QMainWindow):
         
         return center, fwhm#, amp
    
-    def centerOfGravity(self, x, y):
+    def centerOfGravity(self, x, y, peak=None):
         if len(x) == 0:
             y = self.getdBmSpec()
             y = y[self.__scalePos]
             x = self.__scaledWavelength
         y = np.power(10,y/10)
-        pos = np.where(y>(np.max(y)*.3))[0]
+        #off = np.min(y)
+        #print(off)
+        #y -= off
+        #print(y)
+        if not peak:
+            pos = np.where(y>(np.max(y)*.3))[0]
+        else:
+            print('CoG spectral Window')
+            xmin = peak-self.cogSpectralWin
+            xmax = peak+self.cogSpectralWin
+            pos = np.where((x>=xmin)&(x<=xmax))[0]
         x = x[pos]
         y = y[pos]
            

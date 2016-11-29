@@ -10,8 +10,8 @@ __title__ =  'FBGAccQC'
 __about__ = """Hyperion si255 Interrogation Software
             for fbg-acceleration sensors quality control
             """
-__version__ = '0.1.1'
-__date__ = '22.02.2016'
+__version__ = '0.1.2'
+__date__ = '18.11.2016'
 __author__ = 'Roman Flehr'
 __cp__ = u'\u00a9 2016 Loptek GmbH & Co. KG'
 
@@ -34,6 +34,11 @@ import productionLog as proL
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
+        
+        self.sollWL = 1550.0
+        self.tolWL = [0.25, 0,4]
+        self.sollSen = 0.32
+        self.tolSens = [0.02,0.04]
         
         self.isConnected = False
         self.tempConnected = False
@@ -117,6 +122,13 @@ class MainWindow(QtGui.QMainWindow):
         if self.proID.text():
             self.measButton.setEnabled(True)
         self.saveButton.setEnabled(False)
+        self.resetLabel(self.sensorWL)
+        self.resetLabel(self.sensSensitivity)
+        
+        
+    def resetLabel(self, label):
+        label.setStyleSheet("color: black")
+        label.setText('0.000')
         
     def setIDbyIndex(self, index =-1):
         pro, fbg, sens = self.log.getIDbyIndex(index)
@@ -165,6 +177,15 @@ class MainWindow(QtGui.QMainWindow):
                 target.addSeparator()
             else:
                 target.addAction(action)
+                
+    def calculateLabelColor(self, label, value, toleranz):
+        diff = float(label.text())-value
+        if abs(diff) <= toleranz[0]:
+            label.setStyleSheet("color: green")
+        elif abs(diff) <= toleranz[1]:
+            label.setStyleSheet("color: orange")
+        else:
+            label.setStyleSheet("color: red")
 
     def closeEvent(self, event):
         reply = QtGui.QMessageBox.question(self, 'Message',
@@ -294,6 +315,11 @@ class MainWindow(QtGui.QMainWindow):
         self.chan1IsLabel = QtGui.QLabel()
         self.chan1IsLabel.setText('0000.000')
         self.chan1IsLabel.setFont(font)
+        #self.chan1IsLabel = QtGui.QLCDNumber()
+        #self.chan1IsLabel.setSegmentStyle(1)
+        #self.chan1IsLabel.setFont(font)
+        #self.chan1IsLabel.display('0000.000')
+        
         tempLabel = QtGui.QLabel(text='Temperatur:')
         tempLabel.setFont(font)
         font.setBold(False)
@@ -306,12 +332,8 @@ class MainWindow(QtGui.QMainWindow):
         self.numPointsSpin.valueChanged.connect(self.plotW.setRegPoints)
         slopeLabel = QtGui.QLabel(text='Slope [pm/s]:')
         slopeLabel.setFont(font)
-        dSlopeLabel = QtGui.QLabel(text= u'\u0394Slope [pm/s]:')
-        dSlopeLabel.setFont(font)
         self.slopeCh1Label = QtGui.QLabel(text='---')
         self.slopeCh1Label.setFont(font)
-        self.dSlopeCh1Label = QtGui.QLabel(text='---')
-        self.dSlopeCh1Label.setFont(font)
         self.tempDisplay = QtGui.QLabel(text=u'-.- \u00b0C')
         font.setBold(True)
         font.setPointSize(16)
@@ -325,21 +347,36 @@ class MainWindow(QtGui.QMainWindow):
         self.measButton.setFont(font)
         self.measButton.setEnabled(False)
         
+        
+        font.setPointSize(14)
+        sensWlLabel = QtGui.QLabel(unicode('Wellenlänge [nm]:','utf8'))
+        sensWlLabel.setFont(font)
+        self.sensorWL = QtGui.QLabel('-.---')
+        self.sensorWL.setFont(font)
+        sensSensLabel = QtGui.QLabel('Empfindlichkeit [nm/g]:')
+        sensSensLabel.setFont(font)
+        self.sensSensitivity = QtGui.QLabel('-.---')
+        self.sensSensitivity.setFont(font)
+        
+        
+        
         valLayout = QtGui.QGridLayout()
-        valLayout.addWidget(isLabel,0,0)
+        #valLayout.addWidget(isLabel,0,0)
         valLayout.addWidget(self.chan1IsLabel,1,0)
         valLayout.addWidget(slopeLabel,2,0)
-        valLayout.addWidget(dSlopeLabel,2,1)
         valLayout.addWidget(self.slopeCh1Label,3,0)
-        valLayout.addWidget(self.dSlopeCh1Label,3,1)
         valLayout.addWidget(spinLabel,4,0)
         valLayout.addWidget(self.numPointsSpin,4,1)
-        valLayout.addWidget(tempLabel,0,1)
+        #valLayout.addWidget(tempLabel,0,1)
         valLayout.addWidget(self.tempDisplay,1,1)
-        valLayout.addWidget(self.measButton,7,0,1,2)
-        valLayout.addWidget(self.createGBox(),6,1)
+        valLayout.addWidget(self.measButton,6,0,1,2)
+        valLayout.addWidget(self.createGBox(),7,0,1,2)
         valLayout.addWidget(self.newButton,5,0)
         valLayout.addWidget(self.saveButton,5,1)
+        valLayout.addWidget(sensWlLabel,8,0)
+        valLayout.addWidget(self.sensorWL,8,1)
+        valLayout.addWidget(sensSensLabel,9,0)
+        valLayout.addWidget(self.sensSensitivity,9,1)
         
         self.newButton.clicked.connect(self.new)
         self.measButton.clicked.connect(self.measSensorParams)
@@ -532,8 +569,8 @@ class MainWindow(QtGui.QMainWindow):
         
                 
     def saveSensorParams(self):
-        self.calcSensorParams()
-        self.qcFolder
+        #self.calcSensorParams()
+        #self.qcFolder
         fname = self.sensorID.text() + '_'+time.strftime('%Y%m%d_%H%M%S') + '.spc'
         _file = os.path.join(str(self.qcFolder) , str(fname))  
         cen = np.around(self.gPeaks, decimals=3)
@@ -557,6 +594,8 @@ class MainWindow(QtGui.QMainWindow):
         
         temp = self.tempDisplay .text().split(' ')[0]
         self.log.setSensorParams(self.sensorIndex, cen, fwhm, cog, asym, sens, temp)
+        self.saveButton.setEnabled(False)
+        self.saveButton.setStyleSheet("color: red")
     
     def saveSpectrum(self, x, y,gLabel):
         if len(x) == 0:
@@ -602,9 +641,9 @@ class MainWindow(QtGui.QMainWindow):
         self.fbgID.clear()
         self.sensorID.setText(sensorID)
             
-    def setSlope(self, slope, Dslope):
+    def setSlope(self, slope):
         self.slopeCh1Label.setText(slope)
-        self.dSlopeCh1Label.setText(Dslope)  
+        self.calculateLabelColor(self.slopeCh1Label, 0.,[.5,1])
         
 #==============================================================================
 #     def setAutoScale(self, state):
@@ -662,25 +701,37 @@ class MainWindow(QtGui.QMainWindow):
 #### calculations
     
     def measSensorParams(self):
-        index = 0
-        y = self.getdBmSpec()
-        x = self.__wavelength
         if self.zeroButton.isChecked() & self.zeroButton.isEnabled():
             index = 0
             self.zeroButton.setEnabled(False)
             self.minusButton.setChecked(True)
+            self.setSensGParams(index)
+            self.sensorWL.setText(str("{0:.3f}".format(self.gPeaks[0])))
+            self.calculateLabelColor(self.sensorWL,self.sollWL,self.tolWL)
         elif self.minusButton.isChecked() & self.minusButton.isEnabled():
             index = 1
             self.minusButton.setEnabled(False)
             self.plusButton.setChecked(True)
+            self.setSensGParams(index)
+            
         elif self.plusButton.isChecked() & self.plusButton.isEnabled():
             index = 2            
             self.plusButton.setEnabled(False)
             self.zeroButton.setChecked(True)
+            self.setSensGParams(index)
+            self.calcSensorParams()
+            self.sensSensitivity.setText(str("{0:.3f}".format((self.gSens[0]+self.gSens[1])/2)))
+            self.calculateLabelColor(self.sensSensitivity,self.sollSen,self.tolSens)
             self.measButton.setEnabled(False)
             self.saveButton.setEnabled(True)
-        self.saveSpectrum(x,y,self.gLabel[index])
+            self.saveButton.setStyleSheet("color: green")
+        
+        
+    def setSensGParams(self, index):
+        y = self.getdBmSpec()
+        x = self.__wavelength
         center, fwhm = self.peakFit(x,y)
+        self.saveSpectrum(x,y,self.gLabel[index])
         self.gPeaks[index] = center
         self.gFWHM[index] = fwhm
         cog = self.centerOfGravity(x,y, peak=self.gPeaks[index])

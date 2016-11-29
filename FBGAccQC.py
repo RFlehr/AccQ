@@ -9,6 +9,7 @@ import sys
 
 import MainWindow as mw
 
+
 app = QtGui.QApplication(sys.argv)
 spectra = mw.MainWindow()
 spectra.show()

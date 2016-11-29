@@ -11,7 +11,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 from lmfit.models import LinearModel
 
 class Plot(QtGui.QSplitter):
-    returnSlope = QtCore.pyqtSignal(str,str)
+    returnSlope = QtCore.pyqtSignal(str)
     def __init__(self, parent=None):
         QtGui.QSplitter.__init__(self, parent)
         
@@ -51,8 +51,7 @@ class Plot(QtGui.QSplitter):
         pars['intercept'].set(0.0)
         out = mod.fit(_y, pars, x=_x)
         slope = str("{0:.3f}".format(out.best_values['slope']*1000))
-        Dslope = str("{0:.3f}".format(np.std(np.abs(out.residual))*1000))
-        self.returnSlope.emit(slope, Dslope)
+        self.returnSlope.emit(slope)
         _time = self.setTimeLabel(_x)
         self.__Regres.setData(_time, out.best_fit)
          
